@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
 
     # --------------------------------------------------------------
-    # 1️⃣ Work inside the folder that actually contains the code
+    # 1️⃣ Run everything inside the folder that actually contains the code
     # --------------------------------------------------------------
     defaults:
       run:
@@ -59,7 +59,7 @@ jobs:
           $tessDir = "C:\Program Files\Tesseract-OCR"
           $tessExe = Join-Path $tessDir "tesseract.exe"
 
-          # 5.3 – Verify the folder actually exists (helps debugging)
+          # 5.3 – Verify the executable exists (helps debugging)
           if (-Not (Test-Path $tessExe)) {
             Write-Error "❌ Tesseract executable not found at $tessExe"
             Exit 1
@@ -75,6 +75,8 @@ jobs:
       # 6️⃣ Run a quick OCR sanity‑check (non‑interactive)
       # --------------------------------------------------------------
       - name: Run OCR sanity check
+        # <<<‑‑ THIS STEP MUST RUN IN BASH
+        shell: bash
         run: |
           python - <<'PYCODE'
           import sys
@@ -104,6 +106,8 @@ jobs:
       # 7️⃣ (Optional) Run the full script in a head‑less mode
       # --------------------------------------------------------------
       - name: Run snip_to_pdf with a dummy image (headless)
+        # <<<‑‑ ALSO BASH FOR HEREDOC SYNTAX
+        shell: bash
         run: |
           python - <<'PYCODE'
           from pathlib import Path
