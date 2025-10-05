@@ -1,12 +1,12 @@
 name: Run snip_to_pdf (CI demo)
 
-# Allows you to trigger the workflow manually from the GitHub UI
+# Manual trigger from the GitHub UI
 on:
   workflow_dispatch:
 
 jobs:
   test-ocr:
-    # Windows is required for the Tesseract binary we install
+    # Windows runner – required for the Tesseract binary we install
     runs-on: windows-latest
 
     # --------------------------------------------------------------
@@ -50,9 +50,24 @@ jobs:
       # 5️⃣ Install Tesseract OCR (Windows binary via Chocolatey)
       # --------------------------------------------------------------
       - name: Install Tesseract OCR
+        # This step runs in PowerShell (default on Windows runners)
         run: |
+          # 5.1 – Install via Chocolatey
           choco install tesseract -y --no-progress
-          # Verify the installation
+
+          # 5.2 – Refresh the environment so the new PATH entry is visible
+          #      `refreshenv` is a helper script that comes with Chocolatey.
+          #      If for any reason it is not found, we manually prepend the path.
+          if (Get-Command refreshenv -ErrorAction SilentlyContinue) {
+            refreshenv
+          } else {
+            $tessPath = "C:\Program Files\Tesseract-OCR"
+            if (Test-Path $tessPath) {
+              $env:PATH = "$tessPath;$env:PATH"
+            }
+          }
+
+          # 5.3 – Verify the installation
           tesseract --version
 
       # --------------------------------------------------------------
@@ -98,4 +113,3 @@ jobs:
           text_to_pdf(dummy_text, out_pdf)
           print(f"✅ Dummy PDF created at {out_pdf.resolve()}")
           PYCODE
-          
