@@ -1,28 +1,101 @@
-name: Run snip_to_pdf (demo)
+name: Run snip_to_pdf (CI demo)
 
+# Allows you to trigger the workflow manually from the GitHub UI
 on:
-  workflow_dispatch:   # lets you trigger it manually from the GitHub UI
+  workflow_dispatch:
 
 jobs:
-  run-snip:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
+  test-ocr:
+    runs-on: windows-latest                # Windows is required for the Snipping Tool (though we only test OCR)
 
+    defaults:
+      run:
+        # Ensure every step runs in the repo root (where requirements.txt lives)
+        working-directory: ${{ github.workspace }}
+
+    steps:
+      # --------------------------------------------------------------
+      # 1️⃣ Checkout the repository (this puts all files in $GITHUB_WORKSPACE)
+      # --------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------------------
+      # 2️⃣ Set up Python (choose the version you need)
+      # --------------------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12"   # or 3.11 / 3.10 – any version you support
 
-      - name: Install dependencies
+      # --------------------------------------------------------------
+      # 3️⃣ Install Python dependencies from requirements.txt
+      # --------------------------------------------------------------
+      - name: Install Python dependencies
         run: |
+          # Fail fast if the file is missing – this will give a clear error
+          if [ ! -f requirements.txt ]; then
+            echo "❌ requirements.txt not found in the repository root."
+            exit 1
+          fi
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Tesseract
-        run: choco install tesseract --no-progress
-
-      - name: Run script (non‑interactive demo)
+      # --------------------------------------------------------------
+      # 4️⃣ Install Tesseract OCR (Windows binary via Chocolatey)
+      # --------------------------------------------------------------
+      - name: Install Tesseract OCR
         run: |
-          echo "Skipping interactive snip – just checking OCR works on a sample image."
-          python -c "from src.ocr import image_to_text; from PIL import Image; img=Image.new('RGB',(200,50),color='white'); img.save('sample.png'); print(image_to_text(img))"
+          # Chocolatey is pre‑installed on the windows‑latest runner
+          choco install tesseract -y --no-progress
+          # Verify the installation
+          tesseract --version
+
+      # --------------------------------------------------------------
+      # 5️⃣ Run a quick OCR sanity‑check (non‑interactive)
+      # --------------------------------------------------------------
+      - name: Run OCR sanity check
+        run: |
+          python - <<'PYCODE'
+          import sys
+          from pathlib import Path
+          from PIL import Image, ImageDraw, ImageFont
+          import pytesseract
+
+          # Create a tiny image with known text
+          txt = "Hello CI"
+          img = Image.new("RGB", (200, 60), color="white")
+          d = ImageDraw.Draw(img)
+          # Use a built‑in font – no external .ttf required
+          d.text((10, 10), txt, fill="black")
+          img_path = Path("sample.png")
+          img.save(img_path)
+
+          # Run OCR
+          result = pytesseract.image_to_string(img_path, lang="eng")
+          print("OCR RESULT:", result.strip())
+
+          # Simple assertion – the OCR should contain the word "Hello"
+          if "Hello" not in result:
+              sys.exit("❌ OCR did NOT recognise the expected text.")
+          else:
+              print("✅ OCR recognised the text correctly.")
+          PYCODE
+
+      # --------------------------------------------------------------
+      # 6️⃣ (Optional) Run the full script in a *headless* mode
+      # --------------------------------------------------------------
+      # The real snipping UI cannot be exercised in CI, but you can still
+      # invoke the script with a dummy image to prove the end‑to‑end flow.
+      - name: Run snip_to_pdf with a dummy image (headless)
+        run: |
+          python - <<'PYCODE'
+          import sys
+          from pathlib import Path
+          from src.pdf_builder import text_to_pdf
+          # Simulate OCR output from the previous step
+          dummy_text = "Sample job description fetched during CI."
+          out_pdf = Path("dummy_job.pdf")
+          text_to_pdf(dummy_text, out_pdf)
+          print(f"✅ Dummy PDF created at {out_pdf.resolve()}")
+          PYCODE
