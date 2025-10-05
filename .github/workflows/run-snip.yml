@@ -1,6 +1,6 @@
 name: Run snip_to_pdf (CI demo)
 
-# Manual trigger from the GitHub UI
+# Allows you to trigger the workflow manually from the GitHub UI
 on:
   workflow_dispatch:
 
@@ -9,13 +9,12 @@ jobs:
     # Windows is required for the Tesseract binary we install
     runs-on: windows-latest
 
-    # ------------------------------------------------------------------
-    # 1️⃣ Set the working directory to the folder that actually holds
-    #    the Python code and the requirements.txt file.
-    # ------------------------------------------------------------------
+    # --------------------------------------------------------------
+    # 1️⃣ Work inside the folder that actually contains the code
+    # --------------------------------------------------------------
     defaults:
       run:
-        working-directory: ${{ github.workspace }}/my-job-scraper   # <‑‑ HERE
+        working-directory: ${{ github.workspace }}/my-job-scraper   # <‑‑ IMPORTANT
 
     steps:
       # --------------------------------------------------------------
@@ -33,9 +32,11 @@ jobs:
           python-version: "3.12"   # or 3.11 / 3.10
 
       # --------------------------------------------------------------
-      # 4️⃣ Install the Python dependencies from the *correct* path
+      # 4️⃣ Install the Python dependencies (Bash step)
       # --------------------------------------------------------------
       - name: Install Python dependencies
+        # Bash is needed for the `[ ! -f … ]` test
+        shell: bash
         run: |
           # Fail fast if the file is missing – gives a clear error
           if [ ! -f requirements.txt ]; then
@@ -84,7 +85,7 @@ jobs:
           PYCODE
 
       # --------------------------------------------------------------
-      # 7️⃣ (Optional) Run the full script in a headless mode
+      # 7️⃣ (Optional) Run the full script in a head‑less mode
       # --------------------------------------------------------------
       - name: Run snip_to_pdf with a dummy image (headless)
         run: |
@@ -97,3 +98,4 @@ jobs:
           text_to_pdf(dummy_text, out_pdf)
           print(f"✅ Dummy PDF created at {out_pdf.resolve()}")
           PYCODE
+          
