@@ -18,6 +18,7 @@ import tkinter as tk
 from tkinter import filedialog
 from PIL import ImageGrab, Image
 import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"\your\path\to\tesseract.exe"  # <-- Change this to your Tesseract executable path
 from pathlib import Path
 import sys
 
