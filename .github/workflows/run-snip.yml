@@ -55,20 +55,21 @@ jobs:
           # 5.1 – Install via Chocolatey
           choco install tesseract -y --no-progress
 
-          # 5.2 – Refresh the environment so the new PATH entry is visible
-          #      `refreshenv` is a helper script that comes with Chocolatey.
-          #      If for any reason it is not found, we manually prepend the path.
-          if (Get-Command refreshenv -ErrorAction SilentlyContinue) {
-            refreshenv
-          } else {
-            $tessPath = "C:\Program Files\Tesseract-OCR"
-            if (Test-Path $tessPath) {
-              $env:PATH = "$tessPath;$env:PATH"
-            }
+          # 5.2 – Determine where Chocolatey put the binary
+          $tessDir = "C:\Program Files\Tesseract-OCR"
+          $tessExe = Join-Path $tessDir "tesseract.exe"
+
+          # 5.3 – Verify the folder actually exists (helps debugging)
+          if (-Not (Test-Path $tessExe)) {
+            Write-Error "❌ Tesseract executable not found at $tessExe"
+            Exit 1
           }
 
-          # 5.3 – Verify the installation
-          tesseract --version
+          # 5.4 – Add the folder to the current process PATH so the binary is visible
+          $env:PATH = "$tessDir;$env:PATH"
+
+          # 5.5 – Run a quick version check (calling the exe directly)
+          & $tessExe --version
 
       # --------------------------------------------------------------
       # 6️⃣ Run a quick OCR sanity‑check (non‑interactive)
